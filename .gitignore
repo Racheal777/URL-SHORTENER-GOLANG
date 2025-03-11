@@ -1,0 +1,33 @@
+
+.env
+# Binary files
+*.exe
+*.out
+*.o
+*.a
+*.so
+*.dll
+
+# Go build artifacts
+/bin/
+/pkg/
+/build/
+*.test
+
+
+
+# Dependency files
+vendor/
+go.sum
+
+# Environment files (sensitive info)
+
+.env.local
+.env.production
+.env.development
+
+# Logs and cache
+logs/
+*.log
+*.cache
+*.DS_Store
