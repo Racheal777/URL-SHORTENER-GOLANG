@@ -14,7 +14,11 @@
 /build/
 *.test
 
-
+# IDE/editor files
+.vscode/
+.idea/
+*.swp
+*.swo
 
 # Dependency files
 vendor/
