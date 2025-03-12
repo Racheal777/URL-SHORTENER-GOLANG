@@ -1,4 +1,3 @@
-Here's a concise README for your URL shortener project:
 
 ```markdown
 # URL Shortener Service
