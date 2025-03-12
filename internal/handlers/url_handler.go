@@ -3,6 +3,7 @@ package handlers
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"fmt"
 	"time"
 
 	"net/http"
@@ -34,6 +35,7 @@ type ShortenResponse struct {
 
 func GenerateShortcode() string {
 	b := make([]byte, 4)
+	fmt.Println(b)
 	_, err := rand.Read(b)
 	if err != nil {
 		return ""
@@ -53,7 +55,9 @@ func ShortenUrlHandler(c *gin.Context) {
 
 	cacheKey := "short_url:" + req.OrignalUrl
 	cachedShortURL, err := redisClient.Get(ctx, cacheKey).Result()
+
 	if err == nil {
+		fmt.Println("displaying what has cached")
 		c.JSON(http.StatusOK, ShortenResponse{ShortURL: ENDPOINT + cachedShortURL})
 		return
 	}
@@ -63,6 +67,7 @@ func ShortenUrlHandler(c *gin.Context) {
 
 	if existingURL.ID != 0 {
 		redisClient.Set(ctx, cacheKey, existingURL.ShortUrl, 24*time.Hour)
+		redisClient.Set(ctx, "short_code:"+existingURL.ShortUrl, req.OrignalUrl, 24*time.Hour)
 		c.JSON(http.StatusOK, ShortenResponse{ShortURL: ENDPOINT + existingURL.ShortUrl})
 		return
 	}
@@ -92,6 +97,32 @@ func ShortenUrlHandler(c *gin.Context) {
 	}
 
 	redisClient.Set(ctx, cacheKey, shortCode, 24*time.Hour)
+	redisClient.Set(ctx, "short_code:"+shortCode, req.OrignalUrl, 24*time.Hour)
 
 	c.JSON(http.StatusOK, ShortenResponse{ShortURL: ENDPOINT + shortCode})
+}
+
+func RedirectHandler(c *gin.Context) {
+	shortCode := c.Param("shortCode")
+	fmt.Println("ShortCode received:", shortCode)
+
+	cacheKey := "short_code:" + shortCode
+	orignalUrl, err := redisClient.Get(ctx, cacheKey).Result()
+	fmt.Println("cache received:", orignalUrl)
+
+	if err == nil {
+		c.Redirect(http.StatusFound, orignalUrl)
+		return
+	}
+
+	var existingURL models.URL
+	result := db.DB.Where("short_url = ?", shortCode).First(&existingURL)
+	if result.Error != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Short URL not found"})
+		return
+	}
+
+	redisClient.Set(ctx, cacheKey, shortCode, 24*time.Hour)
+	c.Redirect(http.StatusFound, existingURL.OrignalUrl)
+
 }

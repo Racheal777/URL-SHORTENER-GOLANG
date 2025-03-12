@@ -31,6 +31,7 @@ func main() {
 
 	r := gin.Default()
 	r.POST("/url/shorten", handlers.ShortenUrlHandler)
+	r.GET("/:shortCode", handlers.RedirectHandler)
 
 	port := os.Getenv("PORT")
 	if port == "" {
