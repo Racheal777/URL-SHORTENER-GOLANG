@@ -21,10 +21,18 @@ FROM alpine:latest
 # Create a non-root user
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-WORKDIR /root/
+# Set the Current Working Directory inside the container
+WORKDIR /app
 
 # Copy the Pre-built binary file from the previous stage
 COPY --from=builder /app/main .
+
+
+# Set ownership of the files to the non-root user
+RUN chown appuser:appgroup main
+
+# Make the binary executable
+RUN chmod +x main
 
 # Set the non-root user
 USER appuser

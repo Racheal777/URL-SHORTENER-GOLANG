@@ -17,11 +17,15 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-var redisClient = redis.NewClient(&redis.Options{
-	Addr:     "localhost:6379",
-	Password: "",
-	DB:       0,
-})
+var (
+	host        = os.Getenv("REDIS_HOST")
+	port        = os.Getenv("REDIS_PORT")
+	redisClient = redis.NewClient(&redis.Options{
+		Addr:     host + ":" + port,
+		Password: "",
+		DB:       0,
+	})
+)
 
 var ctx = context.Background()
 
