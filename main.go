@@ -4,6 +4,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/redis/go-redis/v9"
+	"github.com/sirupsen/logrus"
 	"os"
 	"url-shortener/internal/handlers"
 
@@ -19,9 +21,20 @@ import (
 
 func main() {
 
-	err := godotenv.Load()
-	log.Println(err)
+	logger := logrus.New()
+	logger.SetFormatter(&logrus.JSONFormatter{})
+	logFile, err := os.OpenFile("/tmp/url-shortener.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+
 	if err != nil {
+		logger.Fatal("Failed to open log file", err)
+	}
+
+	logger.SetOutput(logFile)
+
+	err = godotenv.Load()
+
+	if err != nil {
+		logger.Errorf("Error loading .env file: %v", err)
 		log.Println("Warning: .env file not found, using default environment variables")
 
 	}
@@ -31,13 +44,18 @@ func main() {
 	}
 
 	if db.DB == nil {
-		log.Fatal("Database connection is nil")
+		logger.Fatal("Database connection is nil")
 	}
 
 	if err := db.DB.AutoMigrate(&models.URL{}); err != nil {
 		log.Fatal("Migration failed:", err)
 	}
 
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:     os.Getenv("REDIS_HOST") + ":" + os.Getenv("REDIS_PORT"),
+		Password: "",
+		DB:       0,
+	})
 	r := gin.Default()
 
 	r.Use(func(c *gin.Context) {
@@ -63,8 +81,14 @@ func main() {
 		}
 
 	})
-	r.POST("/url/shorten", handlers.ShortenUrlHandler)
-	r.GET("/:shortCode", handlers.RedirectHandler)
+
+	shortenHandler := &handlers.RedisHandle{RedisClient: redisClient}
+	redirectHandler := &handlers.RedisHandle{RedisClient: redisClient}
+
+	r.Use(handlers.RateLimiterMiddleware(redisClient, 5, time.Minute))
+
+	r.POST("/url/shorten", shortenHandler.ShortenUrlHandler)
+	r.GET("/:shortCode", redirectHandler.RedirectHandler)
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	port := os.Getenv("PORT")
@@ -72,7 +96,7 @@ func main() {
 		port = "8080"
 	}
 
-	log.Println("Listening on port:", port)
+	logger.Info("Listening on port:", port)
 
 	if err := r.Run(":" + port); err != nil {
 		log.Fatal("Error starting server:", err)
