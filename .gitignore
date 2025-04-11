@@ -22,7 +22,6 @@
 
 # Dependency files
 vendor/
-go.sum
 
 # Environment files (sensitive info)
 
