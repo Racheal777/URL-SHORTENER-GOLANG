@@ -1,6 +1,6 @@
 pipeline {
     agent {
-        label "ec2-agent1"
+        label "docker-ec2"
     }
 
     environment  {
@@ -9,7 +9,7 @@ pipeline {
         TAG = "latest"
         DOCKERHUB_USER = 'rachealcodez'
         REMOTE_USER = 'ubuntu'
-        REMOTE_HOST = '54.83.183.30'
+        REMOTE_HOST = '107.21.157.28'
         DEPLOY_DIR = '/home/ubuntu/go-url-shortener'
         NGINX_CONF = '/etc/nginx/conf.d/go-url-shortener.conf'
     }
