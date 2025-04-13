@@ -21,6 +21,17 @@ pipeline {
             }
         }
 
+        stage('Clean Up Docker') {
+            steps {
+             sh '''
+                    echo "Cleaning up Docker..."
+                    docker container prune -f || true
+                    docker image prune -af || true
+                    docker volume prune -f || true
+                '''
+    }
+}
+
         stage('Build Docker Image') {
             steps {
                 sh "docker build -t $IMAGE_NAME:$TAG ."
