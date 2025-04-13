@@ -27,11 +27,18 @@ pipeline {
             }
         }
 
-        stage('Trivy Scan') {
-            steps {
-                sh "trivy image --severity HIGH,CRITICAL --exit-code 1 $IMAGE_NAME:$TAG"
-            }
-        }
+      stage('Trivy Scan') {
+    steps {
+        sh '''
+            if ! command -v trivy >/dev/null; then
+                echo "Installing Trivy..."
+                wget https://github.com/aquasecurity/trivy/releases/download/v0.61.0/trivy_0.61.0_Linux-64bit.deb
+                sudo dpkg -i trivy_0.61.0_Linux-64bit.deb
+            fi
+            trivy image --severity HIGH,CRITICAL --exit-code 1 "$IMAGE_NAME:$TAG"
+        '''
+    }
+}
 
         stage('Push to DockerHub') {
             steps {
