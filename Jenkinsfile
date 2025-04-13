@@ -66,8 +66,10 @@ pipeline {
         stage('Deploy to EC2') {
             steps {
                 sshagent(credentials: ['ec2-api-server']) {
-                    withCredentials([usernamePassword(credentialsId: 'docker-hub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]),
-                      file(credentialsId: 'go-url-env', variable: 'ENV_FILE'){
+                    withCredentials([usernamePassword(credentialsId: 'docker-hub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
+                    file(credentialsId: 'go-url-env', variable: 'ENV_FILE')
+                    ])
+                      {
                         sh '''
                             echo "Copying .env file to remote server..."
                             scp -o StrictHostKeyChecking=no $ENV_FILE $REMOTE_USER@$REMOTE_HOST:$DEPLOY_DIR/.env
