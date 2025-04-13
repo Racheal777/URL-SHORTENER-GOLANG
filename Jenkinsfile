@@ -54,7 +54,7 @@ pipeline {
 
         stage('Deploy to EC2') {
             steps {
-                sshagent(credentials: ['ec2-server']) {
+                sshagent(credentials: ['ec2-api-server]) {
                     withCredentials([usernamePassword(credentialsId: 'docker-hub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                         sh '''
                             ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST <<EOF
