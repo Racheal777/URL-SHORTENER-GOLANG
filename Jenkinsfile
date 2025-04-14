@@ -76,7 +76,7 @@ pipeline {
                        mkdir -p tmp-deploy
 
                         # Copy files and directories to tmp-deploy, excluding tmp-deploy itself
-                        shopt -s extglob
+
                         cp -r !(tmp-deploy) tmp-deploy/
 
                         cp "$ENV_FILE" tmp-deploy/.env
