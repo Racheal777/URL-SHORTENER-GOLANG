@@ -71,6 +71,10 @@ pipeline {
                     ])
                       {
                         sh '''
+
+                            # Ensure the target directory exists
+                            ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST "mkdir -p $DEPLOY_DIR"
+
                             echo "Copying .env file to remote server..."
                             scp -o StrictHostKeyChecking=no $ENV_FILE $REMOTE_USER@$REMOTE_HOST:$DEPLOY_DIR/.env
                             ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST <<'ENDSSH'
