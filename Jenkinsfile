@@ -9,7 +9,7 @@ pipeline {
         TAG = "latest"
         DOCKERHUB_USER = 'rachealcodez'
         REMOTE_USER = 'ubuntu'
-        REMOTE_HOST = '107.21.157.28'
+        REMOTE_HOST = '13.53.188.132'
         DEPLOY_DIR = '/home/ubuntu/go-url-shortener'
         NGINX_CONF = '/etc/nginx/conf.d/go-url-shortener.conf'
     }
@@ -65,7 +65,7 @@ pipeline {
 
         stage('Deploy to EC2') {
             steps {
-                sshagent(credentials: ['ec2-api-server']) {
+                sshagent(credentials: ['api-server-ec2']) {
                     withCredentials([usernamePassword(credentialsId: 'docker-hub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
                     file(credentialsId: 'go-url-env', variable: 'ENV_FILE')
                     ])
