@@ -130,9 +130,11 @@ EOF
                     ENDSSH
 
                     echo "Cleaning up..."
-                    rm -rf tmp-deploy app.tar.gz
-                '''
+                            rm -rf tmp-deploy app.tar.gz
+                        '''
+                    }
+                }
             }
         }
-    }
-}
+    } // close stages
+} // close pipeline
