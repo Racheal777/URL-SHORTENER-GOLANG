@@ -63,68 +63,75 @@ pipeline {
             }
         }
 
-        stage('Deploy to EC2') {
-            steps {
-                sshagent(credentials: ['api-server-ec2']) {
-                    withCredentials([usernamePassword(credentialsId: 'docker-hub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
-                    file(credentialsId: 'go-url-env', variable: 'ENV_FILE')
-                    ])
-                      {
-                        sh '''
+      stage('Deploy to EC2') {
+    steps {
+        sshagent(credentials: ['api-server-ec2']) {
+            withCredentials([
+                usernamePassword(credentialsId: 'docker-hub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
+                file(credentialsId: 'go-url-env', variable: 'ENV_FILE')
+            ]) {
+                sh '''
+                    echo "Deploying to EC2..."
 
-                           echo "Checking ENV file path: $ENV_FILE"
-                            ls -l $ENV_FILE || { echo "ENV file not found or not readable"; exit 1; }
+                    echo "Creating temporary deployment bundle..."
+                    mkdir -p tmp-deploy && cp -r * tmp-deploy
+                    cp "$ENV_FILE" tmp-deploy/.env
 
-                            echo "Removing remote .env file if it exists and is not writable..."
-                            ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST "if [ -f $DEPLOY_DIR/.env ] && [ ! -w $DEPLOY_DIR/.env ]; then rm -f $DEPLOY_DIR/.env; fi"
+                    echo "Copying project files to EC2..."
+                    tar czf app.tar.gz -C tmp-deploy .
+                    scp -o StrictHostKeyChecking=no app.tar.gz $REMOTE_USER@$REMOTE_HOST:/tmp/app.tar.gz
 
+                    echo "Deploying application on EC2..."
+                    ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST <<'ENDSSH'
+                        set -e
 
-                            echo "Copying .env file to remote server..."
-                            scp -o StrictHostKeyChecking=no $ENV_FILE $REMOTE_USER@$REMOTE_HOST:$DEPLOY_DIR/.env
+                        echo "Setting up app directory..."
+                        mkdir -p $DEPLOY_DIR
+                        tar xzf /tmp/app.tar.gz -C $DEPLOY_DIR
 
-                            ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST <<'ENDSSH'
-                                echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        echo "Logging into Docker..."
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
 
-                                which git || (sudo apt-get update && sudo apt-get install -y git)
+                        cd $DEPLOY_DIR
 
-                                if [ ! -d "$DEPLOY_DIR" ]; then
-                                    git clone $GITHUB_REPO $DEPLOY_DIR
-                                else
-                                    cd $DEPLOY_DIR && git pull
-                                fi
+                        echo "Starting app using docker-compose..."
+                        docker-compose pull
+                        docker-compose down || true
+                        docker-compose up -d
 
-                                cd $DEPLOY_DIR
+                        echo "Ensuring nginx is installed..."
+                        if ! command -v nginx >/dev/null 2>&1; then
+                            sudo apt-get update && sudo apt-get install -y nginx
+                        fi
 
-                                docker-compose pull
-                                docker-compose down || true
-                                docker-compose up -d
+                        echo "Configuring nginx reverse proxy..."
+                        cat <<'EOF' | sudo tee $NGINX_CONF
+server {
+    listen 80;
+    server_name short.softlife.reggeerr.com;
 
-                                echo "Setting up NGINX reverse proxy..."
+    location / {
+        proxy_pass http://localhost:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+EOF
 
-                                sudo apt-get update && sudo apt-get install -y nginx
+                        echo "Reloading nginx..."
+                        sudo nginx -t && sudo systemctl reload nginx
 
-                                cat <<'EOF' | sudo tee $NGINX_CONF
-                        server {
-                            listen 80;
-                            server_name short.softlife.reggeerr.com;
+                        echo "Checking app health..."
+                        curl -sf http://localhost:8080 || (echo "App failed health check!" && exit 1)
 
-                            location / {
-                                proxy_pass http://localhost:8080;
-                                proxy_set_header Host $host;
-                                proxy_set_header X-Real-IP $remote_addr;
-                                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                                proxy_set_header X-Forwarded-Proto $scheme;
-                            }
-                        }
-                        EOF
+                        echo "Deployment complete!"
+                    ENDSSH
 
-                                sudo nginx -t && sudo systemctl reload nginx
-
-                                echo "NGINX setup completed!"
-                            ENDSSH
-                        '''
-                    }
-                }
+                    echo "Cleaning up..."
+                    rm -rf tmp-deploy app.tar.gz
+                '''
             }
         }
     }
