@@ -72,9 +72,8 @@ pipeline {
                       {
                         sh '''
 
-                            # Ensure the target directory exists
-//                           # ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST "mkdir -p $DEPLOY_DIR && sudo chown -R $REMOTE_USER:$REMOTE_USER $DEPLOY_DIR"
-
+                           echo "Checking ENV file path: $ENV_FILE"
+                            ls -l $ENV_FILE || { echo "ENV file not found or not readable"; exit 1; }
 
                             echo "Copying .env file to remote server..."
                             scp -o StrictHostKeyChecking=no $ENV_FILE $REMOTE_USER@$REMOTE_HOST:$DEPLOY_DIR/.env
