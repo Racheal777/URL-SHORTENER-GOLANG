@@ -73,10 +73,12 @@ pipeline {
                         sh '''
 
                             # Ensure the target directory exists
-                            ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST "mkdir -p $DEPLOY_DIR"
+                            ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST "sudo mkdir -p $DEPLOY_DIR && sudo chown -R $REMOTE_USER:$REMOTE_USER $DEPLOY_DIR"
+
 
                             echo "Copying .env file to remote server..."
                             scp -o StrictHostKeyChecking=no $ENV_FILE $REMOTE_USER@$REMOTE_HOST:$DEPLOY_DIR/.env
+
                             ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST <<'ENDSSH'
                                 echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
 
