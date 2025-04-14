@@ -72,22 +72,21 @@ pipeline {
             ]) {
                 sh '''
                     echo "Deploying to EC2..."
+                        echo "Creating temporary deployment bundle..."
+                        mkdir -p tmp-deploy && cp -r * tmp-deploy/
+                        cp "$ENV_FILE" tmp-deploy/.env
 
-                    echo "Creating temporary deployment bundle..."
-                    mkdir -p tmp-deploy && cp -r * tmp-deploy
-                    cp "$ENV_FILE" tmp-deploy/.env
+                        echo "Copying project files to EC2..."
+                        tar czf app.tar.gz -C tmp-deploy .
+                        scp -o StrictHostKeyChecking=no app.tar.gz $REMOTE_USER@$REMOTE_HOST:/tmp/app.tar.gz
 
-                    echo "Copying project files to EC2..."
-                    tar czf app.tar.gz -C tmp-deploy .
-                    scp -o StrictHostKeyChecking=no app.tar.gz $REMOTE_USER@$REMOTE_HOST:/tmp/app.tar.gz
+                        echo "Deploying application on EC2..."
+                        ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST <<'ENDSSH'
+                            set -e
 
-                    echo "Deploying application on EC2..."
-                    ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST <<'ENDSSH'
-                        set -e
-
-                        echo "Setting up app directory..."
-                        mkdir -p $DEPLOY_DIR
-                        tar xzf /tmp/app.tar.gz -C $DEPLOY_DIR
+                            echo "Setting up app directory..."
+                            mkdir -p $DEPLOY_DIR
+                            tar xzf /tmp/app.tar.gz -C $DEPLOY_DIR
 
                         echo "Logging into Docker..."
                         echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
