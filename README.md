@@ -37,9 +37,23 @@ cd url-shortener
 
 2. Create a `.env` file:
 ```bash
+# Database configuration
+DB_HOST=db
+DB_USER=
+DB_PASSWORD=
+DB_NAME=
+DB_PORT=5432
+DB_SSLMODE=disable
+DB_TIMEZONE=Asia/Shanghai
+
+# Application configuration
 PORT=8080
-ENDPOINT=http://localhost:8080/
-DATABASE_URL=postgresql://user:password@localhost:5432/dbname
+ENDPOINT=http://short.softlife.reggeerr.com/
+GIN_MODE=release
+
+# Redis configuration
+REDIS_HOST=cache
+REDIS_PORT=6379
 ```
 
 3. Install dependencies:
